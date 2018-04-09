@@ -23,7 +23,7 @@ public class TestPool {
 
     static{
 //      ftpClientPool=new FTPClientPool(Thread.currentThread().getContextClassLoader().getResourceAsStream("ftpClient.properties"));
-        ftpClientPool=new FtpFileHelperPool(TestPool.class.getClassLoader().getResourceAsStream("filehelper.properties"));
+        ftpClientPool=new FtpFileHelperPool();
     }
 
 //    @Test
@@ -54,12 +54,12 @@ public class TestPool {
         }
     }
 
-//    @Test
+    @Test
     public void testDownload(){
         FtpFileHelper helper = null;
         try {
             helper = ftpClientPool.getHelper();
-            boolean b = helper.downloadFile(serverPath, 2 + serverFileName, localPath);
+            boolean b = helper.downloadFile(serverPath, 3 + serverFileName, localPath);
             String replyMessage = helper.getReplyMessage();
             System.out.println("replyMessage : " + replyMessage);
             if (b){

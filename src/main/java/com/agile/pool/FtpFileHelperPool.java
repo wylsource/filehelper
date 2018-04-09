@@ -23,7 +23,7 @@ public class FtpFileHelperPool {
 
     private GenericObjectPool<FtpFileHelper> ftpFileHelperPool;
 
-    public FtpFileHelperPool(InputStream resourceAsStream) {
+    public FtpFileHelperPool() {
         try {
             // 初始化对象池配置
             GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();

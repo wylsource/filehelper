@@ -13,6 +13,8 @@ public interface ConfigConstant {
      */
     String CONFIG_FILE = "filehelper.properties";
 
+    String CONFIG_FILE_PROPERTIES = "properties/filehelper.properties";
+
 
     /* ------------------------- FTP连接池配置 --------------------------------- */
 

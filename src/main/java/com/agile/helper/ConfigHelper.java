@@ -14,8 +14,14 @@ import java.util.Properties;
  */
 public final class ConfigHelper {
 
-    private static Properties CONFIG_PROPS = PropsUtil.loadProps(ConfigConstant.CONFIG_FILE);
+    private static Properties CONFIG_PROPS;
 
+    static {
+        CONFIG_PROPS = PropsUtil.loadProps(ConfigConstant.CONFIG_FILE);
+        if (CONFIG_PROPS == null){
+            CONFIG_PROPS = PropsUtil.loadProps(ConfigConstant.CONFIG_FILE_PROPERTIES);
+        }
+    }
 
     /* ----------------------------- FTP连接属性配置 ------------------------- */
 
