@@ -10,10 +10,7 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 
 /**
@@ -96,8 +93,40 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
     public boolean uploadFile(String pathName, String fileName, String originFileName){
         boolean flag = false;
         InputStream inputStream = null;
-        try{
+        try {
             inputStream = new FileInputStream(new File(originFileName));
+            flag = uploadFileForStream(pathName, fileName, inputStream);
+        }catch (FileNotFoundException e){
+            LOGGER.error("file " + originFileName + " is not found.", e);
+        }
+        return flag;
+    }
+
+    /**
+     * 上传文件
+     * @param pathName ftp服务保存地址
+     * @param fileName 上传到ftp的文件名
+     * @param inputStream 待上传文件流
+     * @return
+     */
+    public boolean uploadFileForStream(String pathName, String fileName, InputStream inputStream){
+        return this.uploadFileForStream(pathName, fileName, inputStream, ftpConfig.isOverwrite());
+    }
+
+    /**
+     * 上传文件
+     * @param pathName ftp服务保存地址
+     * @param fileName 上传到ftp的文件名
+     * @param inputStream 待上传文件流
+     * @return
+     */
+    private boolean uploadFileForStream(String pathName, String fileName, InputStream inputStream, boolean isOverwrite){
+        boolean flag;
+        try{
+            if (!isOverwrite && existFile(pathName + SystemConstant.SEPARATOR + fileName)){
+                LOGGER.debug("文件已经存在,不覆盖文件...");
+                return true;
+            }
             CreateDirecroty(pathName);
             ftpClient.makeDirectory(pathName);
             ftpClient.changeWorkingDirectory(pathName);
@@ -107,17 +136,84 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             flag = false;
         }finally{
             setReply();
-//            if(ftpClient.isConnected()){
-//                try{
-//                    ftpClient.logout();
-//                    ftpClient.disconnect();
-//                }catch(IOException e){
-//                    e.printStackTrace();
-//                }
-//            }
             if(null != inputStream){
                 try {
                     inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return flag;
+    }
+
+    /**
+     * 默认覆盖文件的方法（配置文件不好使）
+     * @param pathName
+     * @param fileName
+     * @param inputStream
+     * @return
+     */
+    public boolean defaultOverWriteUpload(String pathName, String fileName, InputStream inputStream){
+        return this.uploadFileForStream(pathName, fileName, inputStream, true);
+    }
+
+    /**
+     * 下载文件
+     * @param pathName 要下载的文件路径
+     * @param fileName 要下载的文件名称
+     * @param localPath 下载到本地的哪个路径下
+     * @return
+     */
+    public boolean downloadFile(String pathName, String fileName, String localPath){
+        boolean flag = false;
+        OutputStream os=null;
+        try {
+            //切换FTP目录
+            File localFile = new File(localPath + SystemConstant.SEPARATOR + fileName);
+            os = new FileOutputStream(localFile);
+            flag = this.downloadFileForStream(pathName, fileName, os);
+        } catch (Exception e) {
+            LOGGER.error(" download file " + fileName + " is  failed", e);
+        } finally{
+            if(null != os){
+                try {
+                    os.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return flag;
+    }
+
+    /**
+     * 下载文件
+     * @param pathName
+     * @param fileName
+     * @param stream 输出流
+     */
+    private boolean downloadFileForStream(String pathName, String fileName, OutputStream stream){
+        boolean flag = false;
+        try {
+            //切换FTP目录
+            ftpClient.changeWorkingDirectory(pathName);
+            FTPFile[] ftpFiles = ftpClient.listFiles();
+            if (ftpFiles != null && ftpFiles.length > 0) {
+                for (FTPFile file : ftpFiles) {
+                    if (fileName.equalsIgnoreCase(file.getName())) {
+                        flag = ftpClient.retrieveFile(file.getName(), stream);
+                        stream.close();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error(" download file " + fileName + " is  failed", e);
+        } finally{
+            setReply();
+            if(null != stream){
+                try {
+                    stream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

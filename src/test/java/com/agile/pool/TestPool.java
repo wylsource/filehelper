@@ -1,6 +1,7 @@
 package com.agile.pool;
 
 import com.agile.helper.FtpFileHelper;
+import org.junit.Test;
 
 import java.util.Random;
 
@@ -18,14 +19,17 @@ public class TestPool {
     static String serverPath = "/home/testFtp";
     static String serverFileName = ".pdf";
 
+    static String localPath = "F:\\testFtp";
+
     static{
 //      ftpClientPool=new FTPClientPool(Thread.currentThread().getContextClassLoader().getResourceAsStream("ftpClient.properties"));
         ftpClientPool=new FtpFileHelperPool(TestPool.class.getClassLoader().getResourceAsStream("filehelper.properties"));
     }
-    public static void main(String[] args) throws InterruptedException {
 
+//    @Test
+    public void testPool(){
         final Random random = new Random(10);
-        for(int i=0;i<5000;i++){
+        for(int i=0;i<10;i++){
             final String name = i + serverFileName;
 //            Thread.sleep(500);
             Thread thread=new Thread(new Runnable() {
@@ -47,12 +51,22 @@ public class TestPool {
                 }
             });
             thread.start();
-//            try {
-//                thread.sleep(15);
-//            } catch (InterruptedException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
+        }
+    }
+
+//    @Test
+    public void testDownload(){
+        FtpFileHelper helper = null;
+        try {
+            helper = ftpClientPool.getHelper();
+            boolean b = helper.downloadFile(serverPath, 2 + serverFileName, localPath);
+            String replyMessage = helper.getReplyMessage();
+            System.out.println("replyMessage : " + replyMessage);
+            if (b){
+                ftpClientPool.returnObject(helper);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

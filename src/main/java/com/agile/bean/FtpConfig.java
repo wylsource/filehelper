@@ -21,6 +21,7 @@ public class FtpConfig {
     private int retryTimes;
     private int bufferSize;
     private String workingDirectory;
+    private boolean overwrite;
 
     public String getHost() {
         return host;
@@ -124,5 +125,13 @@ public class FtpConfig {
 
     public void setWorkingDirectory(String workingDirectory) {
         this.workingDirectory = workingDirectory;
+    }
+
+    public boolean isOverwrite() {
+        return overwrite;
+    }
+
+    public void setOverwrite(boolean overwrite) {
+        this.overwrite = overwrite;
     }
 }

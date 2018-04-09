@@ -135,4 +135,9 @@ public interface ConfigConstant {
      */
     String WORKINGDIRECTORY = "filehelper.ftpClient.workingDirectory";
 
+    /**
+     * 是否覆盖已有文件
+     */
+    String OVERWRITE = "filehelper.ftpClient.overwrite";
+
 }

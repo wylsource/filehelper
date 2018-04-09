@@ -16,6 +16,12 @@
 
   <dependencies>
 
+    <dependency>
+      <groupId>com.agile</groupId>
+      <artifactId>cipher-helper</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
     <!-- https://mvnrepository.com/artifact/commons-fileupload/commons-fileupload -->
     <dependency>
       <groupId>commons-fileupload</groupId>

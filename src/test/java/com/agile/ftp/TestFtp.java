@@ -16,7 +16,7 @@ public class TestFtp {
 
     private FtpFileHelper helper = null;
 
-    @Before
+//    @Before
     public void init(){
 //        helper = new FtpFileHelper();
 //        helper.initFtpClient();
@@ -25,7 +25,7 @@ public class TestFtp {
     /**
      * 上传文件
      */
-    @Test
+//    @Test
     public void testUpload(){
         String localFile = "F:\\10000233955445.pdf";
         String serverPath = "/home/testFtp";

@@ -51,6 +51,7 @@ public class FtpFileHelperPool {
             ftpConfig.setRetryTimes(ConfigHelper.getRetryTimes());
             ftpConfig.setTransferFileType(ConfigHelper.getTransferFileType());
             ftpConfig.setBufferSize(ConfigHelper.getBufferSize());
+            ftpConfig.setOverwrite(ConfigHelper.getOverwrite());
             // 初始化对象池
             ftpFileHelperPool = new GenericObjectPool<FtpFileHelper>(new FtpHelperFactory(ftpConfig), poolConfig);
         } catch (Exception e) {

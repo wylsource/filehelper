@@ -113,6 +113,13 @@ public final class ConfigHelper {
         return PropsUtil.getString(CONFIG_PROPS, ConfigConstant.WORKINGDIRECTORY);
     }
 
+    /**
+     * 是否覆盖已有文件
+     */
+    public static boolean getOverwrite(){
+        return PropsUtil.getBoolean(CONFIG_PROPS, ConfigConstant.OVERWRITE);
+    }
+
 
     /* ------------------------- FTP连接池配置 --------------------------------- */
 
