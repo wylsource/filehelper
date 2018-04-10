@@ -98,4 +98,31 @@ public class TestFtp {
         }
         Assert.assertTrue(downloadFile);
     }
+
+    @Test
+    public void testUploadResume(){
+        String serverPath = "/home/testFtp";
+        String serverFileName = "mv2.mp4";
+        String localFile = "F:\\电影\\mv.mp4";
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true){
+                    double uploadProcess = helper.getUploadProcess();
+                    System.out.println("---当前上传进度为: [" + uploadProcess + "%]");
+                    if (uploadProcess == 100.0){
+                        break;
+                    }
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        thread.start();
+        boolean uploadFile = helper.uploadFile(serverPath, serverFileName, localFile);
+        Assert.assertTrue(uploadFile);
+    }
 }

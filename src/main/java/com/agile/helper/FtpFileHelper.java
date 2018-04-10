@@ -1,9 +1,9 @@
 package com.agile.helper;
 
-import com.agile.DownloadStatus;
+import com.agile.enums.DownloadStatus;
 import com.agile.bean.FtpConfig;
-import com.agile.bean.FtpConnection;
 import com.agile.constant.SystemConstant;
+import com.agile.enums.UploadStatus;
 import com.agile.joggle.abstractimpl.AbstractFileUploadHelper;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -33,6 +33,8 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
     private String replyMessage;
 
     private long downloadProcess;
+
+    private long uploadProcess;
 
     public FtpFileHelper(FtpConfig ftpConfig){
         super();
@@ -88,9 +90,23 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         InputStream inputStream = null;
         try {
             inputStream = new FileInputStream(new File(originFileName));
-            flag = uploadFileForStream(pathName, fileName, inputStream);
+            boolean isResume = false;
+            if (UploadStatus.LOCAL_BIGGER_REMOTE.getCode().equals(upCompareLocalAndRemote(pathName, fileName, new File(originFileName)).getCode())){
+                isResume = true;
+                flag = uploadFileForStream(pathName, fileName, null, originFileName);
+            }else{
+                flag = uploadFileForStream(pathName, fileName, inputStream, null);
+            }
         }catch (FileNotFoundException e){
             LOGGER.error("file " + originFileName + " is not found.", e);
+        }finally {
+            if (inputStream != null){
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return flag;
     }
@@ -102,8 +118,12 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
      * @param inputStream 待上传文件流
      * @return
      */
-    public boolean uploadFileForStream(String pathName, String fileName, InputStream inputStream){
-        return this.uploadFileForStream(pathName, fileName, inputStream, ftpConfig.isOverwrite());
+    public boolean uploadFileForStream(String pathName, String fileName, InputStream inputStream, String originFileName){
+        boolean overwrite = ftpConfig.isOverwrite();
+        if (inputStream == null && originFileName != null){
+            overwrite = true;
+        }
+        return this.uploadFileForStream(pathName, fileName, inputStream, overwrite, originFileName);
     }
 
     /**
@@ -113,19 +133,48 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
      * @param inputStream 待上传文件流
      * @return
      */
-    private boolean uploadFileForStream(String pathName, String fileName, InputStream inputStream, boolean isOverwrite){
-        boolean flag;
+    private boolean uploadFileForStream(String pathName, String fileName, InputStream inputStream, boolean isOverwrite, String originFileName){
+        boolean flag = false;
+        OutputStream outputStream = null;
+        RandomAccessFile randomAccessFile = null;
         try{
-            if (!isOverwrite && existFile(pathName + SystemConstant.SEPARATOR + fileName)){
+            if (!isOverwrite && existFile(pathName, fileName)){
                 LOGGER.debug("文件 [" + fileName + "] 已经存在,不覆盖文件...");
                 return true;
             }
-            CreateDirecroty(pathName);
-            ftpClient.makeDirectory(pathName);
-            ftpClient.changeWorkingDirectory(pathName);
-            flag = ftpClient.storeFile(fileName, inputStream);
+            FTPFile ftpFile = havingFile(pathName, fileName);
+            if (originFileName != null && inputStream == null){
+                //文件已存在，支持断点续传
+                ftpClient.changeWorkingDirectory(pathName);
+                long ftpFileSize = ftpFile.getSize();
+                File localFile = new File(originFileName);
+                long localSize = localFile.length();
+                long step = localSize / 100;
+                long localreadbytes = 0L;
+                randomAccessFile = new RandomAccessFile(localFile, "r");
+                outputStream = ftpClient.appendFileStream(ftpFile.getName());
+                if (ftpFileSize > 0){
+                    ftpClient.setRestartOffset(ftpFileSize);
+                    uploadProcess = ftpFileSize / step;
+                    randomAccessFile.seek(ftpFileSize);
+                    localreadbytes = ftpFileSize;
+                }
+                byte[] bytes = new byte[1024];
+                int c;
+                while ((c = randomAccessFile.read(bytes)) != -1){
+                    outputStream.write(bytes, 0, c);
+                    localreadbytes  += c;
+                    uploadProcess = localreadbytes / step;
+                }
+                flag = ftpClient.completePendingCommand();
+            }else{
+                CreateDirecroty(pathName);
+                ftpClient.makeDirectory(pathName);
+                ftpClient.changeWorkingDirectory(pathName);
+                flag = ftpClient.storeFile(fileName, inputStream);
+            }
         }catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("upload file is failed.", e);
             flag = false;
         }finally{
             setReply();
@@ -136,6 +185,22 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
                     e.printStackTrace();
                 }
             }
+            if(null != outputStream){
+                try {
+                    outputStream.flush();
+                    outputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (null != randomAccessFile){
+                try {
+                    randomAccessFile.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
         }
         return flag;
     }
@@ -148,7 +213,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
      * @return
      */
     public boolean defaultOverWriteUpload(String pathName, String fileName, InputStream inputStream){
-        return this.uploadFileForStream(pathName, fileName, inputStream, true);
+        return this.uploadFileForStream(pathName, fileName, inputStream, true, null);
     }
 
     /**
@@ -164,7 +229,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         try {
             //切换FTP目录
             File localFile = new File(localPath + SystemConstant.SEPARATOR + fileName);
-            if(DownloadStatus.REMOTE_BIGGER_LOCAL.getCode().equals(compareLocalAndRemote(pathName, fileName, localFile).getCode())){
+            if(DownloadStatus.REMOTE_BIGGER_LOCAL.getCode().equals(downCompareLocalAndRemote(pathName, fileName, localFile).getCode())){
                 //需要断点下载
                 os = new FileOutputStream(localFile, true);
                 flag = downloadFileForStream(pathName, fileName, localFile, os);
@@ -278,7 +343,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
      * @param localFile 本地文件
      * @return 返回下载文件状态
      */
-    private DownloadStatus compareLocalAndRemote(String remotePath,String remoteName,File localFile){
+    private DownloadStatus downCompareLocalAndRemote(String remotePath,String remoteName,File localFile){
         FTPFile ftpFile = havingFile(remotePath, remoteName);
         if (ftpFile != null){
             if (localFile == null || !localFile.exists()){
@@ -291,6 +356,28 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             }
         }
         return DownloadStatus.LOCAL_BIGGER_REMOTE;
+    }
+
+    /**
+     * 判断上传是否完成，用于支持断点上传
+     * @param serverPath 服务器路径
+     * @param serverName 服务器文件
+     * @param localFile 本地文件
+     * @return 返回上传文件状态
+     */
+    private UploadStatus upCompareLocalAndRemote(String serverPath, String serverName, File localFile){
+        FTPFile ftpFile = havingFile(serverPath, serverName);
+        if (localFile != null){
+            if (ftpFile == null){
+                return UploadStatus.UPLOAD_SUCCESS;
+            }
+            long ftpFileSize = ftpFile.getSize();
+            long localSize = localFile.length();
+            if (ftpFileSize < localSize){
+                return UploadStatus.LOCAL_BIGGER_REMOTE;
+            }
+        }
+        return UploadStatus.REMOTE_BIGGER_LOCAL;
     }
 
     /**
@@ -471,6 +558,10 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
 
     public long getDownloadProcess() {
         return downloadProcess;
+    }
+
+    public long getUploadProcess() {
+        return uploadProcess;
     }
 
     /**
