@@ -24,6 +24,19 @@ public class Md5FileCheckHelper extends AbstractFileCheckHelper {
      * @return
      */
     public boolean equals(File sourceFile, File targetFile){
+        if (sourceFile == null){
+            LOGGER.error("sourceFile is not be null");
+            return false;
+        }
+
+        if (targetFile == null){
+            LOGGER.error("targetFile is not be null");
+            return false;
+        }
+        if (sourceFile.length() != targetFile.length()){
+            return false;
+        }
+
         Md5Helper helper = new Md5Helper();
         String source = helper.encryptFile(sourceFile);
         String target = helper.encryptFile(targetFile);

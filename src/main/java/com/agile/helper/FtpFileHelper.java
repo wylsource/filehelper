@@ -23,20 +23,13 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtpFileHelper.class);
 
-    private FTPClient ftpClient = null;
+    private FTPClient ftpClient;
 
     private FtpConfig ftpConfig;
 
     private Integer replyCode;
 
     private String replyMessage;
-
-    private FtpConnection ftpConnection = new FtpConnection(
-            ConfigHelper.getHost(),
-            ConfigHelper.getPort(),
-            ConfigHelper.getUsername(),
-            ConfigHelper.getPassword()
-    );
 
     public FtpFileHelper(FtpConfig ftpConfig){
         super();
@@ -45,9 +38,9 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
     }
 
     /**
-     * 初始化ftp服务器
+     * 初始化ftp客户端
      */
-    public void initFtpClient(FtpConfig ftpConfig) {
+    private void initFtpClient(FtpConfig ftpConfig) {
         ftpClient = new FTPClient();
         //设置编码
         ftpClient.setControlEncoding(ftpConfig.getEncoding());
@@ -62,7 +55,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             ftpClient.setFileType(ftpConfig.getTransferFileType());
             ftpClient.setBufferSize(ftpConfig.getBufferSize());
 
-            if (ftpConfig.isPassiveMode()){
+            if (!ftpConfig.isPassiveMode()){
                 //主动模式连接服务端（客户端随机端口连接服务端20端口, ）
                 ftpClient.enterLocalActiveMode();
             }else{
@@ -124,7 +117,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         boolean flag;
         try{
             if (!isOverwrite && existFile(pathName + SystemConstant.SEPARATOR + fileName)){
-                LOGGER.debug("文件已经存在,不覆盖文件...");
+                LOGGER.debug("文件 [" + fileName + "] 已经存在,不覆盖文件...");
                 return true;
             }
             CreateDirecroty(pathName);
@@ -196,16 +189,10 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
     private boolean downloadFileForStream(String pathName, String fileName, OutputStream stream){
         boolean flag = false;
         try {
-            //切换FTP目录
-            ftpClient.changeWorkingDirectory(pathName);
-            FTPFile[] ftpFiles = ftpClient.listFiles();
-            if (ftpFiles != null && ftpFiles.length > 0) {
-                for (FTPFile file : ftpFiles) {
-                    if (fileName.equalsIgnoreCase(file.getName())) {
-                        flag = ftpClient.retrieveFile(file.getName(), stream);
-                        stream.close();
-                    }
-                }
+            FTPFile ftpFile = havingFile(pathName, fileName);
+            if (ftpFile != null){
+                flag = ftpClient.retrieveFile(ftpFile.getName(), stream);
+                stream.close();
             }
         } catch (Exception e) {
             LOGGER.error(" download file " + fileName + " is  failed", e);
@@ -218,6 +205,50 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
                     e.printStackTrace();
                 }
             }
+        }
+        return flag;
+    }
+
+    /**
+     * 删除文件
+     * @param pathName 要删除的文件路径
+     * @param fileName 要删除的文件名称
+     * @return
+     */
+    public boolean deleteFile(String pathName, String fileName){
+        boolean flag = false;
+        try {
+            //切换FTP目录
+            ftpClient.changeWorkingDirectory(pathName);
+            if (ftpClient.dele(fileName) > 0){
+                flag = true;
+            }
+        } catch (Exception e) {
+            LOGGER.error("delete file [" + fileName + "] failed.", e);
+        }finally {
+            setReply();
+        }
+        return flag;
+    }
+
+    /**
+     * 修改文件名
+     * @param pathName
+     * @param oldFileName
+     * @param newFileName
+     * @return
+     */
+    public boolean renameFile(String pathName, String oldFileName, String newFileName){
+        boolean flag = false;
+        try {
+            FTPFile ftpFile = havingFile(pathName, oldFileName);
+            if (ftpFile != null){
+                flag = ftpClient.rename(ftpFile.getName(), newFileName);
+            }
+        } catch (Exception e) {
+            LOGGER.error(" rename file " + oldFileName + " is  failed", e);
+        } finally{
+            setReply();
         }
         return flag;
     }
@@ -266,22 +297,82 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
                 }
             }
         }
+        setReply();
         return success;
     }
 
     /**
-     * 判断ftp服务器文件是否存在
+     * 判断ftp服务器路径是否存在
+     * @param path 文件路径
+     * @return
      */
-    public boolean existFile(String path) throws IOException {
+    public boolean existFile(String path) {
         boolean flag = false;
-        FTPFile[] ftpFileArr = ftpClient.listFiles(path);
-        if (ftpFileArr.length > 0) {
-            flag = true;
+        try {
+            FTPFile[] ftpFileArr = ftpClient.listFiles(path);
+            if (ftpFileArr.length > 0) {
+                flag = true;
+            }
+        }catch (IOException e){
+            LOGGER.error("search path [" + path + "] failed.", e);
+        }finally {
+            setReply();
         }
         return flag;
     }
 
-    public void setReply(){
+    /**
+     * 判断指定文件在服务器是否存在
+     * @param filePath 文件所在服务器路径
+     * @param fileName 文件名称
+     * @return 返回文件是否存在
+     */
+    public boolean existFile(String filePath, String fileName){
+        boolean flag = false;
+        try {
+            ftpClient.changeWorkingDirectory(filePath);
+            FTPFile[] ftpFiles = ftpClient.listFiles();
+            if (ftpFiles != null && ftpFiles.length > 0) {
+                for (FTPFile file : ftpFiles) {
+                    if (fileName.equalsIgnoreCase(file.getName())) {
+                        flag = true;
+                    }
+                }
+            }
+        }catch (Exception e){
+            LOGGER.error("search file [" + fileName + "] 失败.", e);
+        }finally {
+            setReply();
+        }
+        return flag;
+    }
+
+    /**
+     * 获取服务器指定文件信息
+     * @param filePath 文件路径
+     * @param fileName 文件名称
+     * @return 返回文件信息的封装
+     */
+    public FTPFile havingFile(String filePath, String fileName){
+        try {
+            ftpClient.changeWorkingDirectory(filePath);
+            FTPFile[] ftpFiles = ftpClient.listFiles();
+            if (ftpFiles != null && ftpFiles.length > 0) {
+                for (FTPFile file : ftpFiles) {
+                    if (fileName.equalsIgnoreCase(file.getName())) {
+                        return file;
+                    }
+                }
+            }
+        }catch (Exception e){
+            LOGGER.error("search file [" + fileName + "] 失败.", e);
+        }finally {
+            setReply();
+        }
+        return null;
+    }
+
+    private void setReply(){
         this.replyCode = ftpClient.getReplyCode();
         this.replyMessage = ftpClient.getReplyString();
     }
@@ -328,14 +419,10 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         if (ftpClient != null){
             try {
                 connect = ftpClient.sendNoOp();
-//                if(connect){
-//                    ftpClient.changeWorkingDirectory(ftpConfig.getWorkingDirectory());
-//                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
         return connect;
     }
-
 }

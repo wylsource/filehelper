@@ -1,9 +1,14 @@
 package com.agile.ftp;
 
 import com.agile.helper.FtpFileHelper;
+import com.agile.pool.FtpFileHelperPool;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.FileInputStream;
 
 /**
  * @Author: WuYL
@@ -14,23 +19,51 @@ import org.junit.Test;
 public class TestFtp {
 
 
-    private FtpFileHelper helper = null;
+    private static FtpFileHelperPool pool = null;
 
-//    @Before
-    public void init(){
-//        helper = new FtpFileHelper();
-//        helper.initFtpClient();
+    private static FtpFileHelper helper = null;
+
+    @BeforeClass
+    public static void init() throws Exception {
+        pool = new FtpFileHelperPool();
+        helper = pool.getHelper();
     }
 
     /**
      * 上传文件
      */
-//    @Test
-    public void testUpload(){
+    @Before
+    public void testUpload() throws Exception {
         String localFile = "F:\\10000233955445.pdf";
         String serverPath = "/home/testFtp";
         String serverFileName = "12345.pdf";
-        boolean uploadFile = helper.uploadFile(serverPath, serverFileName, localFile);
+        boolean uploadFile = helper.defaultOverWriteUpload(serverPath, serverFileName, new FileInputStream(new File(localFile)));
+        if (uploadFile){
+            pool.returnObject(helper);
+        }
         Assert.assertTrue(uploadFile);
+    }
+
+//    @Test
+    public void testReName(){
+        String serverPath = "/home/testFtp";
+        String serverFileName = "12345.pdf";
+        boolean renameFile = helper.renameFile(serverPath, serverFileName, "rename.pdf");
+        if (renameFile){
+            pool.returnObject(helper);
+        }
+        Assert.assertTrue(renameFile);
+    }
+
+    @Test
+    public void testDeleteFile() throws Exception {
+        String serverPath = "/home/testFtp";
+        String serverFileName = "rename.pdf";
+        helper = pool.getHelper();
+        boolean deleteFile = TestFtp.helper.deleteFile(serverPath, serverFileName);
+        if (deleteFile){
+            pool.returnObject(TestFtp.helper);
+        }
+        Assert.assertTrue(deleteFile);
     }
 }

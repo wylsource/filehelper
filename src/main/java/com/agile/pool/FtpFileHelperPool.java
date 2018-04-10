@@ -67,10 +67,10 @@ public class FtpFileHelperPool {
      * @throws Exception
      */
     public FtpFileHelper getHelper() throws Exception {
-        System.out.println("获取前");
-        System.out.println("活动"+ftpFileHelperPool.getNumActive());
-        System.out.println("等待"+ftpFileHelperPool.getNumWaiters());
-        System.out.println("----------");
+//        System.out.println("获取前");
+//        System.out.println("活动"+ftpFileHelperPool.getNumActive());
+//        System.out.println("等待"+ftpFileHelperPool.getNumWaiters());
+//        System.out.println("----------");
         return ftpFileHelperPool.borrowObject();
     }
 
@@ -79,14 +79,14 @@ public class FtpFileHelperPool {
      * @param helper
      */
     public void returnObject(FtpFileHelper helper){
-        System.out.println("归还前");
-        System.out.println("活动"+ftpFileHelperPool.getNumActive());
-        System.out.println("等待"+ftpFileHelperPool.getNumWaiters());
-        System.out.println("----------");
+//        System.out.println("归还前");
+//        System.out.println("活动"+ftpFileHelperPool.getNumActive());
+//        System.out.println("等待"+ftpFileHelperPool.getNumWaiters());
+//        System.out.println("----------");
         ftpFileHelperPool.returnObject(helper);
-        System.out.println("归还后");
-        System.out.println("活动"+ftpFileHelperPool.getNumActive());
-        System.out.println("等待"+ftpFileHelperPool.getNumWaiters());
-        System.out.println("----------");
+//        System.out.println("归还后");
+//        System.out.println("活动"+ftpFileHelperPool.getNumActive());
+//        System.out.println("等待"+ftpFileHelperPool.getNumWaiters());
+//        System.out.println("----------");
     }
 }
