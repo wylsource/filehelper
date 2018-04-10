@@ -55,7 +55,7 @@ public class TestFtp {
         Assert.assertTrue(renameFile);
     }
 
-    @Test
+//    @Test
     public void testDeleteFile() throws Exception {
         String serverPath = "/home/testFtp";
         String serverFileName = "rename.pdf";
@@ -65,5 +65,37 @@ public class TestFtp {
             pool.returnObject(TestFtp.helper);
         }
         Assert.assertTrue(deleteFile);
+    }
+
+//    @Test
+    public void testDownload() throws InterruptedException {
+        String serverPath = "/home/testFtp";
+        String serverFileName = "mv.mp4";
+        String localFile = "F:\\电影";
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true){
+                    double downloadProcess = helper.getDownloadProcess();
+                    System.out.println("---当前下载进度为: [" + downloadProcess + "%]");
+                    if (downloadProcess == 100.0){
+                        break;
+                    }
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        thread.start();
+        boolean downloadFile = helper.downloadFile(serverPath, serverFileName, localFile);
+
+        thread.join();
+        if (downloadFile && helper.getDownloadProcess() == 100){
+//            pool.returnObject(helper);
+        }
+        Assert.assertTrue(downloadFile);
     }
 }

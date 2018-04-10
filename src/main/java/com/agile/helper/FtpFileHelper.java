@@ -1,5 +1,6 @@
 package com.agile.helper;
 
+import com.agile.DownloadStatus;
 import com.agile.bean.FtpConfig;
 import com.agile.bean.FtpConnection;
 import com.agile.constant.SystemConstant;
@@ -31,6 +32,8 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
 
     private String replyMessage;
 
+    private long downloadProcess;
+
     public FtpFileHelper(FtpConfig ftpConfig){
         super();
         this.ftpConfig = ftpConfig;
@@ -45,16 +48,13 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         //设置编码
         ftpClient.setControlEncoding(ftpConfig.getEncoding());
         try {
-
             //连接ftp服务器
             ftpClient.connect(ftpConfig.getHost(), ftpConfig.getPort());
             //登录ftp服务器
             ftpClient.login(ftpConfig.getUsername(), ftpConfig.getPassword());
-
             //设置为2进制传输
             ftpClient.setFileType(ftpConfig.getTransferFileType());
             ftpClient.setBufferSize(ftpConfig.getBufferSize());
-
             if (!ftpConfig.isPassiveMode()){
                 //主动模式连接服务端（客户端随机端口连接服务端20端口, ）
                 ftpClient.enterLocalActiveMode();
@@ -164,8 +164,15 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         try {
             //切换FTP目录
             File localFile = new File(localPath + SystemConstant.SEPARATOR + fileName);
-            os = new FileOutputStream(localFile);
-            flag = this.downloadFileForStream(pathName, fileName, os);
+            if(DownloadStatus.REMOTE_BIGGER_LOCAL.getCode().equals(compareLocalAndRemote(pathName, fileName, localFile).getCode())){
+                //需要断点下载
+                os = new FileOutputStream(localFile, true);
+                flag = downloadFileForStream(pathName, fileName, localFile, os);
+            }else{
+                //不需要断点下载
+                os = new FileOutputStream(localFile);
+                flag = this.downloadFileForStream(pathName, fileName, os);
+            }
         } catch (Exception e) {
             LOGGER.error(" download file " + fileName + " is  failed", e);
         } finally{
@@ -190,6 +197,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         boolean flag = false;
         try {
             FTPFile ftpFile = havingFile(pathName, fileName);
+
             if (ftpFile != null){
                 flag = ftpClient.retrieveFile(ftpFile.getName(), stream);
                 stream.close();
@@ -207,6 +215,82 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             }
         }
         return flag;
+    }
+
+    /**
+     * 下载文件（支持断点续下载）,同时支持查看进度
+     * @param pathName
+     * @param fileName
+     * @param localFile
+     * @param stream 输出流
+     */
+    private boolean downloadFileForStream(String pathName, String fileName, File localFile, OutputStream stream){
+        boolean flag = false;
+        InputStream inputStream = null;
+        try {
+            FTPFile ftpFile = havingFile(pathName, fileName);
+            long localSize = localFile.length();
+            ftpClient.setRestartOffset(localSize);
+            if (ftpFile != null){
+                inputStream = ftpClient.retrieveFileStream(ftpFile.getName());
+                byte[] bytes = new byte[1024];
+                long step = ftpFile.getSize() / 100;
+                this.downloadProcess = localSize / step;
+                int c;
+                while ((c = inputStream.read(bytes))!= -1){
+                    stream.write(bytes, 0 , c);
+                    localSize += c;
+                    long newProcess = localSize / step;
+                    if (newProcess > this.downloadProcess){
+                        this.downloadProcess = newProcess;
+                    }
+                }
+                flag = ftpClient.completePendingCommand();
+                inputStream.close();
+                stream.close();
+            }
+        } catch (Exception e) {
+            LOGGER.error(" download file " + fileName + " is  failed", e);
+        } finally{
+            setReply();
+            if(null != stream){
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if(null != inputStream){
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return flag;
+    }
+
+    /**
+     * 判断下载是否完成，用于支持断点下载
+     * @param remotePath 服务器路径
+     * @param remoteName 服务器文件
+     * @param localFile 本地文件
+     * @return 返回下载文件状态
+     */
+    private DownloadStatus compareLocalAndRemote(String remotePath,String remoteName,File localFile){
+        FTPFile ftpFile = havingFile(remotePath, remoteName);
+        if (ftpFile != null){
+            if (localFile == null || !localFile.exists()){
+                return DownloadStatus.REMOTE_BIGGER_LOCAL;
+            }
+            long ftpFileSize = ftpFile.getSize();
+            long localSize = localFile.length();
+            if (ftpFileSize > localSize){
+                return DownloadStatus.REMOTE_BIGGER_LOCAL;
+            }
+        }
+        return DownloadStatus.LOCAL_BIGGER_REMOTE;
     }
 
     /**
@@ -383,6 +467,10 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
 
     public String getReplyMessage() {
         return replyMessage;
+    }
+
+    public long getDownloadProcess() {
+        return downloadProcess;
     }
 
     /**
