@@ -18,10 +18,17 @@ public class Md5Test {
 
     @Test
     public void testEquals(){
-        String sourcePath = "F:\\testFtp\\2.pdf";
-        String targetPath = "F:\\10000233955445.pdf";
-        boolean equals = helper.equals(new File(sourcePath), new File(targetPath));
-//        Assert.assertTrue(equals);
+        String oldPath = "F:\\testFtp\\2.pdf";
+        String newPath = "F:\\testFtp\\2_1.pdf";
+        int i = 0;
+        long start = System.currentTimeMillis();
+        //耗时约13477毫秒
+        while (i++ <= 1000000){
+            boolean equals = helper.equals(new File(oldPath), new File(newPath));
+            System.out.println("---第 [" + i + "] 次验证：" + equals);
+        }
+        System.out.println("------------总耗时：" + (System.currentTimeMillis()-start) + "毫秒");
+
     }
 
 }

@@ -17,23 +17,22 @@ public class Md5FileCheckHelper extends AbstractFileCheckHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Md5FileCheckHelper.class);
 
+    private static FileOperateHelper operateHelper;
+
+    public Md5FileCheckHelper(){
+        operateHelper = new FileOperateHelper();
+    }
+
     /**
      * 比较两个文件是否相同
      * @param sourceFile 源文件
      * @param targetFile 目标文件
      * @return
      */
+    @Override
     public boolean equals(File sourceFile, File targetFile){
-        if (sourceFile == null){
-            LOGGER.error("sourceFile is not be null");
-            return false;
-        }
 
-        if (targetFile == null){
-            LOGGER.error("targetFile is not be null");
-            return false;
-        }
-        if (sourceFile.length() != targetFile.length()){
+        if (!operateHelper.compareFileSize(sourceFile, targetFile)){
             return false;
         }
 
