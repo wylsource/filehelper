@@ -5,7 +5,7 @@ import com.agile.joggle.abstractimpl.AbstractFileHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -75,5 +75,83 @@ public class FileOperateHelper extends AbstractFileHandle {
 
         }
         return null;
+    }
+
+    /**
+     * 关闭输入流的方法
+     * @param inputStream 输入流
+     */
+    public static void closeInputStream(InputStream inputStream){
+        if (null != inputStream){
+            try {
+                inputStream.close();
+            } catch (IOException e) {
+                LOGGER.error("close inputstream is failed.", e);
+            }
+        }
+    }
+
+    /**
+     * 关闭 Reader 的方法
+     * @param reader 输入流
+     */
+    public static void closeReader(Reader reader){
+        if (null != reader){
+            try {
+                reader.close();
+            } catch (IOException e) {
+                LOGGER.error("close reader is failed.", e);
+            }
+        }
+    }
+
+    /**
+     * 文件转 byte[]
+     * @param file 源文件
+     * @return 返回 byte[]
+     */
+    public byte[] fileToBytes(File file){
+        InputStream inputStream = null;
+        try {
+            inputStream = new FileInputStream(file);
+            byte[] bytes = new byte[inputStream.available()];
+            inputStream.read(bytes);
+            return bytes;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally {
+            closeInputStream(inputStream);
+        }
+        return null;
+    }
+
+    /**
+     * 关闭输出流的方法
+     * @param outputStream 输出流
+     */
+    public static void closeOutStream(OutputStream outputStream){
+        if (null != outputStream){
+            try {
+                outputStream.flush();
+                outputStream.close();
+            } catch (IOException e) {
+                LOGGER.error("close outputStream is failed.", e);
+            }
+        }
+    }
+
+    /**
+     * 关闭 writer 的方法
+     * @param writer
+     */
+    public static void closeWriter(Writer writer){
+        if (null != writer){
+            try {
+                writer.flush();
+                writer.close();
+            } catch (IOException e) {
+                LOGGER.error("close writer is failed.", e);
+            }
+        }
     }
 }

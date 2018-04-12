@@ -29,5 +29,4 @@ public class TestFileOperater {
         FileInfo fileInfo = fileOperateHelper.getFileInfo(filePath);
         System.out.println(fileInfo.toString());
     }
-
 }

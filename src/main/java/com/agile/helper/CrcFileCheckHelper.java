@@ -35,8 +35,8 @@ public class CrcFileCheckHelper extends AbstractFileCheckHelper{
             return false;
         }
         CrcHelper crcHelper = new CrcHelper();
-        String sourceFileCrc = crcHelper.encryptFile(sourceFile);
-        String targetFileCrc = crcHelper.encryptFile(targetFile);
+        String sourceFileCrc = crcHelper.encryptByte(operateHelper.fileToBytes(sourceFile));
+        String targetFileCrc = crcHelper.encryptByte(operateHelper.fileToBytes(targetFile));
         if (sourceFileCrc != null && sourceFileCrc.equals(targetFileCrc)){
             return true;
         }

@@ -100,13 +100,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         }catch (FileNotFoundException e){
             LOGGER.error("file " + originFileName + " is not found.", e);
         }finally {
-            if (inputStream != null){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            FileOperateHelper.closeInputStream(inputStream);
         }
         return flag;
     }
@@ -178,21 +172,8 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             flag = false;
         }finally{
             setReply();
-            if(null != inputStream){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if(null != outputStream){
-                try {
-                    outputStream.flush();
-                    outputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            FileOperateHelper.closeInputStream(inputStream);
+            FileOperateHelper.closeOutStream(outputStream);
             if (null != randomAccessFile){
                 try {
                     randomAccessFile.close();
@@ -241,13 +222,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
         } catch (Exception e) {
             LOGGER.error(" download file " + fileName + " is  failed", e);
         } finally{
-            if(null != os){
-                try {
-                    os.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            FileOperateHelper.closeOutStream(os);
         }
         return flag;
     }
@@ -271,13 +246,7 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             LOGGER.error(" download file " + fileName + " is  failed", e);
         } finally{
             setReply();
-            if(null != stream){
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            FileOperateHelper.closeOutStream(stream);
         }
         return flag;
     }
@@ -318,20 +287,8 @@ public class FtpFileHelper extends AbstractFileUploadHelper {
             LOGGER.error(" download file " + fileName + " is  failed", e);
         } finally{
             setReply();
-            if(null != stream){
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if(null != inputStream){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            FileOperateHelper.closeInputStream(inputStream);
+            FileOperateHelper.closeOutStream(stream);
         }
         return flag;
     }
